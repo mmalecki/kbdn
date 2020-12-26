@@ -1,0 +1,16 @@
+[package]
+name = "kbdn"
+version = "0.1.0"
+authors = ["Maciej Małecki <me@mmalecki.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+surf = "2.1.0"
+regex = "1"
+lazy_static = "1"
+
+[dependencies.async-std]
+version = "1.8.0"
+features = ["attributes"]

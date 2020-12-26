@@ -13,11 +13,6 @@ struct ProgressUpdate {
     success: u8,
 }
 
-const EMPTY_UPDATE: ProgressUpdate = ProgressUpdate {
-    error: 0,
-    success: 0
-};
-
 trait ProgressParser {
     fn new() -> Self where Self: Sized;
     fn parse_line(&mut self, line: &str) -> Option<ProgressUpdate>;
@@ -96,6 +91,14 @@ fn get_parser(spec: &str) -> Box<dyn ProgressParser> {
     }
 }
 
+async fn set_progress(channel: &str, progress: u8) -> surf::Result<()> {
+    surf::post(format!("http://127.0.0.1:9916/progress/{}" , channel))
+        .body(surf::Body::from_string(progress.to_string()))
+        .await?;
+    Ok(())
+}
+
+
 #[async_std::main]
 async fn main() -> surf::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -106,13 +109,13 @@ async fn main() -> surf::Result<()> {
     let mut parser: Box<dyn ProgressParser> = get_parser(args[1].as_str());
 
     for line in stdin.lock().lines() {
-        let update = parser.parse_line(&line.unwrap()).unwrap_or(EMPTY_UPDATE);
-
-        progress = (progress + update.error + update.success) % (PROGRESS_MAX + 1);
-
-        let res = surf::post("http://127.0.0.1:9916/progress/0")
-            .body(surf::Body::from_string(progress.to_string()))
-            .await?;
+        match parser.parse_line(&line.unwrap()) {
+            Some(update) => {
+                progress = (progress + update.error + update.success) % (PROGRESS_MAX + 1);
+                set_progress("0", progress).await;
+            },
+            None => (),
+        }
     }
     Ok(())
 }

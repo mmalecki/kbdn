@@ -37,7 +37,7 @@ impl ProgressParser for TerraformParser {
     fn parse_line(&mut self, line: &str) -> Option<ProgressUpdate> {
         lazy_static! {
             static ref PLAN_SUMMARY: Regex = Regex::new(r"(\d+) to add, (\d+) to change, (\d+) to destroy.").unwrap();
-            static ref UPDATE: Regex = Regex::new(r"(Destruction|Creation) complete after").unwrap();
+            static ref UPDATE: Regex = Regex::new(r"(Destruction|Creation|Modifications) complete after").unwrap();
         }
 
         match PLAN_SUMMARY.captures(line) {
@@ -48,13 +48,15 @@ impl ProgressParser for TerraformParser {
                 None
             },
             None => {
-                let step = (PROGRESS_MAX as u16 / self.total()) as u8;
-
                 match UPDATE.captures(line) {
-                    Some(cg) => match &cg[1] {
-                        "Creation" => Some(ProgressUpdate { success: step, error: 0 }),
-                        "Destruction" => Some(ProgressUpdate { success: 0, error: step }),
-                        _ => None,
+                    Some(cg) => {
+                        let step = (PROGRESS_MAX as u16 / self.total()) as u8;
+
+                        match &cg[1] {
+                            "Creation" | "Modifications" => Some(ProgressUpdate { success: step, error: 0 }),
+                            "Destruction" => Some(ProgressUpdate { success: 0, error: step }),
+                            _ => None,
+                        }
                     },
                     None => None
                 }
